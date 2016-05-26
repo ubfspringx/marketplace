@@ -8,9 +8,39 @@
 <!--%import("css/mmarketplace.css")-->
 
 
+{@
+include_once('./modules/file/file.class.php');
+include_once('./modules/file/file.controller.php');
+$oFileController = &getController('file');
+$editor_sequence = '1';
+$upload_target_srl = $document_srl;
+$oFileController->setUploadInfo($editor_sequence, $upload_target_srl);
+$_SESSION['upload_info'][$editor_sequence]->enabled = true;
+$_SESSION['upload_info'][$editor_sequence]->upload_target_srl = $upload_target_srl;
+Context::loadLang('./modules/editor/lang');
+// File config
+$oFileModel = getModel('file');
+$file_config = $oFileModel->getUploadConfig();
+
+$columnList = array('thumbnails_srl');
+$args = new stdClass();
+$args->document_srl = $this->document_srl;
+$output = executeQuery('marketplace.getMarketplaceItem', $args, $columnList);
+$thumb_n = $output->data->thumbnails_srl;
+
+$sortIndex = 'file_srl';		
+$args = new stdClass();
+$args->upload_target_srl = $thumb_n;
+$args->isvalid = "Y";
+$args->sort_index = $sortIndex;
+
+$output = executeQueryArray("file.getFiles", $args);
+$file_list = $output->data;
+
+}
+
 <!--relatedselects plugin load-->
 <load target="plugin/dependent-selects/jquery.dependent-selects.js" type="head" />
-
 
 <div class="bd">
 	<div class="hx h2">
@@ -23,11 +53,16 @@
 	<div cond="$XE_VALIDATOR_MESSAGE" class="message {$XE_VALIDATOR_MESSAGE_TYPE}">
 		<p>{$XE_VALIDATOR_MESSAGE}</p>
 	</div>
-	<form action="./" method="post" enctype="multipart/form-data" class="ff" ruleset="insertItem">
+	<form action="./" id="myform" method="post" enctype="multipart/form-data" class="ff" ruleset="insertItem">
     <input type="hidden" name="act" value="procMarketplaceInsertDocument" />
     <input type="hidden" name="mid" value="{$mid}" />
 	<input type="hidden" name="document_srl" value="{$document_srl}" />
     <input type="hidden" name="status" value="PUBLIC" />
+	<!--@if($is_kitkat=="Y")-->
+	<input type="hidden" name="thumbnail" value="{$thumb_n}"/>
+	<!--@end-->
+	
+	
 		<ul>
 			<li>
 				<label for="nText">제품구분</label>
@@ -51,6 +86,41 @@
 			</li>
 			<!--@end-->
 
+			
+
+			<!--@if($is_kitkat=="Y")-->
+			
+
+			<li>
+				<label for="nText">물품 사진 (대표사진)</label>				
+				<input name="thumbnail_c" id="thumbnail_c" type="file" />
+			</li>
+
+			<li>
+				<ul id="files_c" class="clear">
+					<block cond="$file_list" loop="$file_list=>$key,$file">
+					<li id="file_{$file->file_srl}" class="success" cond="$file->comment == '0'"><img src="{$file->uploaded_filename}" width="100" height="100"><a href="#" onclick="window.Android.delete_m('{$file->file_srl}','{$editor_sequence}');delete_thumb();">삭제</a> </li>
+					</block>
+				</ul>
+			</li>	
+
+			<li>
+			
+				<label for="nText">물품 사진 (+)</label>
+				<input name="thumbnail_s" id="thumbnail_s" type="file" />
+			</li>
+
+			<li>
+				<ul id="files" class="clear">
+					<block cond="$file_list" loop="$file_list=>$key,$file">
+					<li id="file_{$file->file_srl}" class="success" cond="$file->comment != '0'"><img src="{$file->uploaded_filename}" width="100" height="100"><a href="#" onclick="window.Android.delete_m('{$file->file_srl}','{$editor_sequence}');">삭제</a> </li>
+					</block>
+				</ul>
+			</li>
+
+			<!--@else-->
+
+
 			<li>
 				<label for="nText">물품 사진 (대표사진)</label>
 				<input name="thumbnail[0]" type="file" />
@@ -60,6 +130,8 @@
 				<label for="nText">물품 사진 (+)</label>
 				<input name="thumbnail[1]" type="file" />
 			</li>
+
+			<!--@end-->
 
 			<li>
 				<label for="nTitle">판매글 제목</label>

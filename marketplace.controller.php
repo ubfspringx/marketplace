@@ -30,19 +30,53 @@ class marketplaceController extends marketplace
 		{
 			return new Object(-1, 'msg_not_permitted');
 		}
+
+		if(!preg_match("/XEPUSH/",$_SERVER['HTTP_USER_AGENT'])){
+
 		
-		// 업로드 전 섬네일 파일 체크
-		$oFileModel = getModel('file');
-		$file_module_config = $oFileModel->getFileConfig($this->module_srl);
-		$allowed_filesize = $file_module_config->allowed_filesize * 1024 * 1024;
-		foreach(Context::get('thumbnail') as $key => $file)
-		{
-			// 이미지 형식 체크
-			if(!preg_match("/\.(jpg|png|jpeg|gif|bmp)$/i",$file['name'])) {
-				return new Object(-1, 'msg_thumbnail_image_file_only');
-			}	
-			// 파일 사이즈 체크
-			if($allowed_filesize < filesize($file['tmp_name'])) return new Object(-1, 'msg_thumbnail_exceeds_limit_size');
+			// 업로드 전 섬네일 파일 체크
+			$oFileModel = getModel('file');
+			$file_module_config = $oFileModel->getFileConfig($this->module_srl);
+			$allowed_filesize = $file_module_config->allowed_filesize * 1024 * 1024;
+			foreach(Context::get('thumbnail') as $key => $file)
+			{
+				// 이미지 형식 체크
+				if(!preg_match("/\.(jpg|png|jpeg|gif|bmp)$/i",$file['name'])) {
+					return new Object(-1, 'msg_thumbnail_image_file_only');
+				}	
+				// 파일 사이즈 체크
+				if($allowed_filesize < filesize($file['tmp_name'])) return new Object(-1, 'msg_thumbnail_exceeds_limit_size');
+			}
+
+		}else{
+
+			$user_agent = str_replace(" ","",$_SERVER['HTTP_USER_AGENT']);
+			$user_agent = str_replace(".","",$user_agent);
+			
+
+
+			if(strpos($user_agent, "Android44") === false && strpos($user_agent, "Android441")  === false && strpos($user_agent, "Android442") === false  && strpos($user_agent, "Android443")  === false && strpos($user_agent, "Android444") === false){
+
+			
+
+				// 업로드 전 섬네일 파일 체크
+				$oFileModel = getModel('file');
+				$file_module_config = $oFileModel->getFileConfig($this->module_srl);
+				$allowed_filesize = $file_module_config->allowed_filesize * 1024 * 1024;
+				foreach(Context::get('thumbnail') as $key => $file)
+				{
+					// 이미지 형식 체크
+					if(!preg_match("/\.(jpg|png|jpeg|gif|bmp)$/i",$file['name'])) {
+						return new Object(-1, 'msg_thumbnail_image_file_only');
+					}	
+					// 파일 사이즈 체크
+					if($allowed_filesize < filesize($file['tmp_name'])) return new Object(-1, 'msg_thumbnail_exceeds_limit_size');
+				}
+
+
+			}
+
+
 		}
 
 		// Insert document and item
@@ -217,21 +251,54 @@ class marketplaceController extends marketplace
 	private function _insertMarketItem($obj) 
 	{
 		$args = new stdClass;
-
-		//thumbnail upload
-		$args->thumbnails_srl = getNextSequence();
 		$oFileController = getController('file');
-		foreach($obj->thumbnail as $key => $file)
-		{
-			if(!is_uploaded_file($file['tmp_name'])) continue;
 
-            $output = $oFileController->insertFile($file, $this->module_srl, $args->thumbnails_srl);
-            if(!$output->toBool()) return $output;
+		if(!preg_match("/XEPUSH/",$_SERVER['HTTP_USER_AGENT'])){
+
+			//thumbnail upload
 			
-			$obj->file_srl = $output->get('file_srl');
-			$obj->comment = $key;
-			$output = executeQuery('marketplace.updateFileComment', $obj);
+			$args->thumbnails_srl = getNextSequence();			
+			foreach($obj->thumbnail as $key => $file)
+			{
+				if(!is_uploaded_file($file['tmp_name'])) continue;
+
+				$output = $oFileController->insertFile($file, $this->module_srl, $args->thumbnails_srl);
+				if(!$output->toBool()) return $output;
+				
+				$obj->file_srl = $output->get('file_srl');
+				$obj->comment = $key;
+				$output = executeQuery('marketplace.updateFileComment', $obj);
+			}
+
+		}else{
+
+			$user_agent = str_replace(" ","",$_SERVER['HTTP_USER_AGENT']);
+			$user_agent = str_replace(".","",$user_agent);
+			
+
+
+			if(strpos($user_agent, "Android44") === false && strpos($user_agent, "Android441")  === false && strpos($user_agent, "Android442") === false  && strpos($user_agent, "Android443")  === false && strpos($user_agent, "Android444") === false){
+				//thumbnail upload
+			
+				$args->thumbnails_srl = getNextSequence();			
+				foreach($obj->thumbnail as $key => $file)
+				{
+					if(!is_uploaded_file($file['tmp_name'])) continue;
+
+					$output = $oFileController->insertFile($file, $this->module_srl, $args->thumbnails_srl);
+					if(!$output->toBool()) return $output;
+					
+					$obj->file_srl = $output->get('file_srl');
+					$obj->comment = $key;
+					$output = executeQuery('marketplace.updateFileComment', $obj);
+				}
+
+			}else{
+				$args->thumbnails_srl = $obj->thumbnail;
+			}
+
 		}
+
 		$args->document_srl = $obj->document_srl;
 		$args->original_price = removeHackTag(str_replace(",","",$obj->item_original_price));
 		$args->price = removeHackTag(str_replace(",","",$obj->item_price));
@@ -239,7 +306,7 @@ class marketplaceController extends marketplace
 
 		$args->priority_area = removeHackTag($obj->priority_area);
 		$args->product_name = removeHackTag($obj->item_name);
-		$args->used_month = removeHackTag($obj->item_used_month);
+		$args->used_month = removeHackTag($obj->item_used_month);		
 
 		$args->delivery =  ($obj->item_delivery)? $obj->item_delivery : 'N';
 		$args->direct_dealing = ($obj->item_direct_dealing)? $obj->item_direct_dealing : 'N';
@@ -249,6 +316,10 @@ class marketplaceController extends marketplace
 
 		// make thumbnail files valid
 		if($output->toBool()) $oFileController->setFilesValid($args->thumbnails_srl);
+		$args->category_srl = $obj->category_srl;
+
+		$output_d = ModuleHandler::triggerCall('marketplace.insertMarketItem', 'after', $args);
+
 		return $output;
 	}
 

@@ -68,6 +68,8 @@ class marketplace extends ModuleObject
 
 		if(!$oModuleModel->getTrigger('document.deleteDocument', 'marketplace', 'controller', 'triggerDeleteMarketplaceItem', 'after')) return true;
 
+		if(!$oModuleModel->getTrigger('marketplace.insertMarketItem', 'marketplace', 'controller', 'triggerInsertMarketplaceItem', 'after')) return true;
+
 		// 오래된 키워드 및 검색된 문서 삭제 keyword_expiry_date	
 		$doDelete = true;
 		$oCacheHandler = CacheHandler::getInstance('object');
@@ -121,6 +123,13 @@ class marketplace extends ModuleObject
 		{
 			$oModuleController->insertTrigger('document.deleteDocument', 'marketplace', 'controller', 'triggerDeleteMarketplaceItem', 'after');
 		}
+
+		if(!$oModuleModel->getTrigger('marketplace.insertMarketItem', 'marketplace', 'controller', 'triggerInsertMarketplaceItem', 'after'))
+		{
+			$oModuleController->insertTrigger('marketplace.insertMarketItem', 'marketplace', 'controller', 'triggerInsertMarketplaceItem', 'after');
+		}
+
+		
 
 
 		return new Object(0, 'success_updated');
